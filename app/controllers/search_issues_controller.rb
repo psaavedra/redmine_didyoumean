@@ -61,7 +61,10 @@ class SearchIssuesController < ApplicationController
       end
       
       if Setting.plugin_redmine_didyoumean['show_only_open'] == "1"
-        valid_statuses = IssueStatus.all(:conditions => ["is_closed <> ?", true])
+        if Rails::VERSION::MAJOR > 3
+          valid_statuses = IssueStatus.where(["is_closed <> ?", true]).collect{|s| s.id.to_s }
+        else
+          valid_statuses = IssueStatus.all(:conditions => ["is_closed <> ?", true])
         logger.debug "Valid status ids are #{valid_statuses}"
         conditions += " AND status_id in (?)"
         variables << valid_statuses
@@ -76,7 +79,10 @@ class SearchIssuesController < ApplicationController
       limit = Setting.plugin_redmine_didyoumean['limit']
       limit = 5 if limit.nil? or limit.empty?
 
-      @issues = Issue.visible.find(:all, :conditions => [conditions, *variables], :limit => limit)
+      if Rails::VERSION::MAJOR > 3
+        @issues = Issue.visible.where([conditions, *variables]).limit(limit)
+      else
+        @issues = Issue.visible.find(:all, :conditions => [conditions, *variables], :limit => limit)
       @count = Issue.visible.count(:all, :conditions => [conditions, *variables])
 
       logger.debug "#{@count} results found, returning the first #{@issues.length}"

@@ -3,5 +3,5 @@ if Rails::VERSION::MAJOR < 3
     map.plugin_route 'searchissues', :controller => "search_issues", :action => 'index'
   end
 else
-  match 'searchissues', :controller => "search_issues", :action => 'index'
+  match 'searchissues', :controller => "search_issues", :via => [:get], :action => 'index'
 end
