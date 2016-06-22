@@ -23,6 +23,9 @@ class SearchIssuesController < ApplicationController
       # this is probably too strict, in this use case
       @tokens.slice! 5..-1 if @tokens.size > 5
 
+      url_more_conditions = (['%s'] * ( @tokens.length)).join('+')
+      @url_more = "/search?utf8=✓&issues=1&q=" + (url_more_conditions % @tokens)
+      
       if all_words
         separator = ' AND '
       else
@@ -65,6 +68,7 @@ class SearchIssuesController < ApplicationController
           valid_statuses = IssueStatus.where(["is_closed <> ?", true]).collect{|s| s.id.to_s }
         else
           valid_statuses = IssueStatus.all(:conditions => ["is_closed <> ?", true])
+        end
         logger.debug "Valid status ids are #{valid_statuses}"
         conditions += " AND status_id in (?)"
         variables << valid_statuses
@@ -83,21 +87,22 @@ class SearchIssuesController < ApplicationController
         @issues = Issue.visible.where([conditions, *variables]).limit(limit)
       else
         @issues = Issue.visible.find(:all, :conditions => [conditions, *variables], :limit => limit)
+      end
       @count = Issue.visible.where([conditions, *variables]).count()
 
       logger.debug "#{@count} results found, returning the first #{@issues.length}"
 
       # order by decreasing creation time. Some relevance sort would be a lot more appropriate here
       @issues = @issues.sort {|a,b| b.id <=> a.id}
-      
 
     else
       @query = ""
       @count = 0
       @issues = []
+      @url_more = ""
     end
 
-    render :json => { :total => @count, :issues => @issues.map{|i| 
+    render :json => { :url_more => @url_more, :total => @count, :issues => @issues.map{|i| 
       { #make a deep copy, otherwise rails3 makes weird stuff nesting the issue as mapping.
       :id => i.id,
       :tracker_name => i.tracker.name,

@@ -11,3 +11,7 @@ ul#similar_issues_list {
 #similar_issues a {
   cursor: hand;
 }
+
+.issue_closed{
+  text-decoration:line-through !important;
+}

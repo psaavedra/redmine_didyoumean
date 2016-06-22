@@ -9,10 +9,10 @@ Redmine::Plugin.register :redmine_didyoumean do
   author_url 'http://abahgat.com/'
 
   default_settings = {
-    'show_only_open' => '1',
+    'show_only_open' => '0',
     'project_filter' => '1',
     'min_word_length' => '2',
-    'limit' => '5'
+    'limit' => '10'
   }
 
   settings(:default => default_settings, :partial => 'settings/settings')
