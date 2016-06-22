@@ -71,9 +71,9 @@ function populateSimilarIssuesBlock(data) {
   if (data.total > data.issues.length) {
     var more = data.total - data.issues.length;
     if (window.jQuery) {
-      getElem('similar_issues_list').append('<li>+' + more + ' ' + dym.label_more + '</li>');
+      getElem('similar_issues_list').append('<li><a href="' + data.url_more + '">+' + more + ' ' + dym.label_more + '</a></li>');
     } else {
-      getElem('similar_issues_list').insert({bottom: '<li>+' + more + ' ' + dym.label_more + '</li>'});
+      getElem('similar_issues_list').insert({bottom: '<li><a href="' + data.url_more + '">' + more + ' ' + dym.label_more + '</a></li>'});
     }
   }
 }
@@ -86,8 +86,19 @@ function displayItem(item) {
   var item_subject = sanitize(item.subject);
   var item_status = sanitize(item.status_name);
   var project_name = sanitize(item.project_name);
+  var item_class = '';
 
-  var item_html = '<li><a href="' + issue_url + '">' 
+  if (item_status == 'Closed') {
+      item_class = "issue_closed";
+  }
+  else if (item_status == 'Rejected') {
+      item_class = "issue_closed";
+  }
+  else if (item_status == 'Resolved') {
+      item_class = "issue_closed";
+  }
+
+  var item_html = '<li><a href="' + issue_url + '" class="' + item_class + '">' 
                   + tracker_name 
                   + ' ' + item_id
                   + ' &ndash; ' 
