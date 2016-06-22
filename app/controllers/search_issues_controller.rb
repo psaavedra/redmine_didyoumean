@@ -83,7 +83,7 @@ class SearchIssuesController < ApplicationController
         @issues = Issue.visible.where([conditions, *variables]).limit(limit)
       else
         @issues = Issue.visible.find(:all, :conditions => [conditions, *variables], :limit => limit)
-      @count = Issue.visible.count(:all, :conditions => [conditions, *variables])
+      @count = Issue.visible.where([conditions, *variables]).count()
 
       logger.debug "#{@count} results found, returning the first #{@issues.length}"
 
