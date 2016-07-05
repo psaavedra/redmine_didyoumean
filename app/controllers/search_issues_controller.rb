@@ -19,12 +19,20 @@ class SearchIssuesController < ApplicationController
     @tokens = @tokens.uniq.select {|w| w.length >= min_length }
 
     if !@tokens.empty?
+      # pick the current project
+      project = Project.find(params[:project_id]) unless params[:project_id].blank?
+      if project.nil?
+          scope = ""
+      else
+          scope = project.identifier
+      end
+
       # no more than 5 tokens to search for
       # this is probably too strict, in this use case
       @tokens.slice! 5..-1 if @tokens.size > 5
 
       url_more_conditions = (['%s'] * ( @tokens.length)).join('+')
-      @url_more = "/search?utf8=✓&issues=1&q=" + (url_more_conditions % @tokens)
+      @url_more = "/search?utf8=✓&issues=1&q=" + (url_more_conditions % @tokens) + "&scope=" + scope
       
       if all_words
         separator = ' AND '
@@ -36,9 +44,6 @@ class SearchIssuesController < ApplicationController
 
       conditions = (['lower(subject) like lower(?)'] * @tokens.length).join(separator)
       variables = @tokens
-
-      # pick the current project
-      project = Project.find(params[:project_id]) unless params[:project_id].blank?
 
       # when editing an existing issue this will hold its id
       issue_id = params[:issue_id] unless params[:issue_id].blank?
