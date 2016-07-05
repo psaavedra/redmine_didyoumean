@@ -62,39 +62,67 @@ class SearchIssuesController < ApplicationController
         conditions += " AND project_id in (?)"
         variables << scope
       end
-      
-      if Setting.plugin_redmine_didyoumean['show_only_open'] == "1"
-        if Rails::VERSION::MAJOR > 3
-          valid_statuses = IssueStatus.where(["is_closed <> ?", true]).collect{|s| s.id.to_s }
-        else
-          valid_statuses = IssueStatus.all(:conditions => ["is_closed <> ?", true])
-        end
-        logger.debug "Valid status ids are #{valid_statuses}"
-        conditions += " AND status_id in (?)"
-        variables << valid_statuses
-      end
 
       if !issue_id.nil?
         logger.debug "Excluding issue #{issue_id}"
         conditions += " AND issues.id != (?)"
         variables << issue_id
       end
+     
+      if Rails::VERSION::MAJOR > 3
+          valid_statuses = IssueStatus.where(["is_closed = ?", true]).collect{|s| s.id.to_s }
+      else
+          valid_statuses = IssueStatus.all(:conditions => ["is_closed = ?", true])
+      end
+      conditions_closed = conditions + " AND status_id in (?)"
+      variables_closed = variables + [valid_statuses]
+      
+      if Rails::VERSION::MAJOR > 3
+          valid_statuses = IssueStatus.where(["is_closed <> ?", true]).collect{|s| s.id.to_s }
+      else
+          valid_statuses = IssueStatus.all(:conditions => ["is_closed <> ?", true])
+      end
+      conditions_open = conditions + " AND status_id in (?)"
+      variables_open = variables + [valid_statuses]
 
       limit = Setting.plugin_redmine_didyoumean['limit']
       limit = 5 if limit.nil? or limit.empty?
 
+      @issues_closed = []
       if Rails::VERSION::MAJOR > 3
-        @issues = Issue.visible.where([conditions, *variables]).limit(limit)
-      else
-        @issues = Issue.visible.find(:all, :conditions => [conditions, *variables], :limit => limit)
-      end
-      @count = Issue.visible.where([conditions, *variables]).count()
+          logger.error "Set project filter to #{conditions_open}"
+          logger.error "Set project filter to #{variables_open}"
 
-      logger.debug "#{@count} results found, returning the first #{@issues.length}"
+        @issues_open = Issue.visible.where([conditions_open, *variables_open]).limit(limit)
+        if Setting.plugin_redmine_didyoumean['show_only_open'] != "1"
+          @issues_closed = Issue.visible.where([conditions_closed, *variables_closed]).limit(limit)
+        end
+      else
+        @issues_open = Issue.visible.find(:all, :conditions => [conditions_open, *variables_open], :limit => limit)
+        if Setting.plugin_redmine_didyoumean['show_only_open'] != "1"
+          @issues_closed = Issue.visible.find(:all, :conditions => [conditions_closed, *variables_closed], :limit => limit)
+        end
+      end
+      @count_open = Issue.visible.where([conditions_open, *variables_open]).count()
+      @count_closed = Issue.visible.where([conditions_closed, *variables_closed]).count()
+
+      if Rails::VERSION::MAJOR > 3
+        @issues_open = Issue.visible.where([conditions_open, *variables_open]).limit(limit)
+        @issues_closed = Issue.visible.where([conditions_closed, *variables_closed]).limit(limit)
+      else
+        @issues_open = Issue.visible.find(:all, :conditions => [conditions_open, *variables_open], :limit => limit)
+        @issues_closed = Issue.visible.find(:all, :conditions => [conditions_closed, *variables_closed], :limit => limit)
+      end
+      @count_open = Issue.visible.where([conditions_open, *variables_open]).count()
+      @count_closed = Issue.visible.where([conditions_closed, *variables_closed]).count()
+      @count = @count_open + @count_closed
 
       # order by decreasing creation time. Some relevance sort would be a lot more appropriate here
-      @issues = @issues.sort {|a,b| b.id <=> a.id}
+      @issues_open = @issues_open.sort {|a,b| b.id <=> a.id}
+      @issues_closed = @issues_closed.sort {|a,b| b.id <=> a.id}
+      @issues = @issues_open + @issues_closed
 
+      logger.debug "#{@count} results found, returning the first #{@issues.length}"
     else
       @query = ""
       @count = 0
