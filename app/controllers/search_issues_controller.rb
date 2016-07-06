@@ -32,8 +32,8 @@ class SearchIssuesController < ApplicationController
       @tokens.slice! 5..-1 if @tokens.size > 5
 
       url_more_conditions = (['%s'] * ( @tokens.length)).join('+')
-      @url_more = "/search?utf8=✓&issues=1&q=" + (url_more_conditions % @tokens) + "&scope=" + scope
-      
+      # @url_more = "/search?utf8=✓&issues=1&q=" + (url_more_conditions % @tokens) + "&scope=" + scope
+      @url_more = "/projects/" + scope + "/issues?utf8=%E2%9C%93&set_filter=1&f%5B%5D=subject&op%5Bsubject%5D=%7E&v%5Bsubject%5D%5B%5D=" + (url_more_conditions % @tokens) + "&f%5B%5D=&c%5B%5D=tracker&c%5B%5D=status&c%5B%5D=priority&c%5B%5D=subject&group_by=status"
       if all_words
         separator = ' AND '
       else
@@ -95,28 +95,15 @@ class SearchIssuesController < ApplicationController
 
       @issues_closed = []
       if Rails::VERSION::MAJOR > 3
-          logger.error "Set project filter to #{conditions_open}"
-          logger.error "Set project filter to #{variables_open}"
-
-        @issues_open = Issue.visible.where([conditions_open, *variables_open]).limit(limit)
+        @issues_open = Issue.visible.where([conditions_open, *variables_open]).order(:id => :desc).limit(limit)
         if Setting.plugin_redmine_didyoumean['show_only_open'] != "1"
-          @issues_closed = Issue.visible.where([conditions_closed, *variables_closed]).limit(limit)
+          @issues_closed = Issue.visible.where([conditions_closed, *variables_closed]).order(:id => :desc).limit(limit)
         end
       else
         @issues_open = Issue.visible.find(:all, :conditions => [conditions_open, *variables_open], :limit => limit)
         if Setting.plugin_redmine_didyoumean['show_only_open'] != "1"
           @issues_closed = Issue.visible.find(:all, :conditions => [conditions_closed, *variables_closed], :limit => limit)
         end
-      end
-      @count_open = Issue.visible.where([conditions_open, *variables_open]).count()
-      @count_closed = Issue.visible.where([conditions_closed, *variables_closed]).count()
-
-      if Rails::VERSION::MAJOR > 3
-        @issues_open = Issue.visible.where([conditions_open, *variables_open]).limit(limit)
-        @issues_closed = Issue.visible.where([conditions_closed, *variables_closed]).limit(limit)
-      else
-        @issues_open = Issue.visible.find(:all, :conditions => [conditions_open, *variables_open], :limit => limit)
-        @issues_closed = Issue.visible.find(:all, :conditions => [conditions_closed, *variables_closed], :limit => limit)
       end
       @count_open = Issue.visible.where([conditions_open, *variables_open]).count()
       @count_closed = Issue.visible.where([conditions_closed, *variables_closed]).count()
