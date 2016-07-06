@@ -93,25 +93,31 @@ class SearchIssuesController < ApplicationController
       limit = Setting.plugin_redmine_didyoumean['limit']
       limit = 5 if limit.nil? or limit.empty?
 
-      @issues_closed = []
       if Rails::VERSION::MAJOR > 3
         @issues_open = Issue.visible.where([conditions_open, *variables_open]).order(:id => :desc).limit(limit)
-        if Setting.plugin_redmine_didyoumean['show_only_open'] != "1"
-          @issues_closed = Issue.visible.where([conditions_closed, *variables_closed]).order(:id => :desc).limit(limit)
-        end
       else
         @issues_open = Issue.visible.find(:all, :conditions => [conditions_open, *variables_open], :limit => limit)
-        if Setting.plugin_redmine_didyoumean['show_only_open'] != "1"
-          @issues_closed = Issue.visible.find(:all, :conditions => [conditions_closed, *variables_closed], :limit => limit)
-        end
       end
       @count_open = Issue.visible.where([conditions_open, *variables_open]).count()
+      @issues_closed = []
+      @count_closed = 0
+      if @count_open < limit.to_i
+        if Rails::VERSION::MAJOR > 3
+          if Setting.plugin_redmine_didyoumean['show_only_open'] != "1"
+            @issues_closed = Issue.visible.where([conditions_closed, *variables_closed]).order(:id => :desc).limit(limit.to_i - @count_open)
+          end
+        else
+          if Setting.plugin_redmine_didyoumean['show_only_open'] != "1"
+            @issues_closed = Issue.visible.find(:all, :conditions => [conditions_closed, *variables_closed], :limit => limit.to_i - @count_open)
+          end
+        end
+      end
       @count_closed = Issue.visible.where([conditions_closed, *variables_closed]).count()
       @count = @count_open + @count_closed
 
       # order by decreasing creation time. Some relevance sort would be a lot more appropriate here
-      @issues_open = @issues_open.sort {|a,b| b.id <=> a.id}
-      @issues_closed = @issues_closed.sort {|a,b| b.id <=> a.id}
+      # @issues_open = @issues_open.sort {|a,b| b.id <=> a.id}
+      # @issues_closed = @issues_closed.sort {|a,b| b.id <=> a.id}
       @issues = @issues_open + @issues_closed
 
       logger.debug "#{@count} results found, returning the first #{@issues.length}"
